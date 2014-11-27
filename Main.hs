@@ -1,6 +1,8 @@
 {-#LANGUAGE OverloadedStrings, DeriveDataTypeable, QuasiQuotes #-}
 module Main where
 
+import Paths_tryplayground
+
 import MFlow.Wai.Blaze.Html.All
 import MFlow (mimeTable)
 import Data.Default
@@ -80,6 +82,8 @@ application  pending = do
              WS.sendTextData conn  $ T.pack $ show exs
      loop conn
 main= do
+  dataDir <- getDataDir
+  setCurrentDirectory dataDir
   C.forkOS $ do
 
      WS.runServer "0.0.0.0" 24601 $ application
