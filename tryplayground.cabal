@@ -14,13 +14,6 @@ maintainer:          agocorona@gmail.com
 build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
-data-files:          examples/*.hs
-                     examples/*.html
-                     examples/*.css
-                     examples/*.png
-                     examples/*.ico
-                     examples/*.js
-                     examples/shellmate8032
 
 executable tryplayground
   main-is:             Main.hs

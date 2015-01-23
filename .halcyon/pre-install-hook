@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+source "${HALCYON_DIR}/src.sh"
+
+
+install_haste_packages () {
+	expect_vars HOME
+
+	local source_dir install_dir
+	expect_args source_dir install_dir -- "$@"
+
+	local -a packages_a
+	packages_a=()
+	packages_a+=( 'https://github.com/mietek/haste-perch' )
+	packages_a+=( 'https://github.com/mietek/haste-playground' )
+
+	local packages haste_dir
+	packages=$( IFS=$'\n' && echo "${packages_a[*]:-}" ) || return 1
+	haste_dir=$( get_tmp_dir 'halcyon-haste' ) || return 1
+
+	log 'Installing Haste packages'
+
+	local names
+	names=$( git_acquire_all "${source_dir}" "${packages}" "${haste_dir}" ) || return 1
+
+	local name
+	while read -r name; do
+		log "Installing Haste package: ${name}"
+
+		(
+			cd "${haste_dir}/${name}" &&
+			haste-inst install --global |& quote
+		) || return 1
+	done <<<"${names}"
+
+	rm -rf "${haste_dir}" || return 1
+}
+
+
+pre_install_hook () {
+	expect_vars HOME HALCYON_BASE
+	expect_existing "${HALCYON_BASE}/cabal/config"
+
+	local tag source_dir install_dir data_dir
+	expect_args tag source_dir install_dir data_dir -- "$@"
+
+	# NOTE: Haste needs a custom Cabal config, as it does not support Cabal sandboxes.
+
+	local saved_config
+	saved_config=''
+	if [[ -f "${HOME}/.cabal/config" ]]; then
+		saved_config=$( get_tmp_file 'halcyon-saved-config' ) || return 1
+		mv "${HOME}/.cabal/config" "${saved_config}" || return 1
+	fi
+	mkdir -p "${HOME}/.cabal" || return 1
+	grep -v 'require-sandbox:' "${HALCYON_BASE}/cabal/config" >"${HOME}/.cabal/config" || return 1
+
+	local magic_dir
+	magic_dir="${source_dir}/.halcyon/haste-compiler-0.5"
+
+	local -a opts_a
+	opts_a=()
+	opts_a+=( --root="${install_dir}" )
+	opts_a+=( --prefix="${HALCYON_BASE}" )
+	opts_a+=( --constraints="${magic_dir}/constraints" )
+	opts_a+=( --extra-configure-flags="${magic_dir}/extra-configure-flags" )
+	opts_a+=( --pre-install-hook="${magic_dir}/pre-install-hook" )
+	opts_a+=( --sandbox-extra-os-packages="${magic_dir}/sandbox-extra-os-packages" )
+
+	halcyon install "${opts_a[@]}" 'https://github.com/mietek/haste-compiler' || return 1
+
+	# NOTE: Haste needs to be already installed, so that Haste packages
+	# can be installed, in order to be archived as part of the
+	# application install directory.
+
+	copy_dir_into "${install_dir}${HALCYON_BASE}" "${HALCYON_BASE}" || return 1
+
+	# NOTE: Haste needs Cabal to generate HOME/.cabal/setup-exe-cache.
+	# https://github.com/valderman/haste-compiler/issues/257
+
+	log
+	populate_cabal_setup_exe_cache || return 1
+
+	log
+	if ! install_haste_packages "${source_dir}" "${install_dir}"; then
+		log_error 'Failed to install Haste packages'
+		return 1
+	fi
+
+	copy_dir_into "${HOME}/.haste/jsmods" "${install_dir}${HALCYON_BASE}/jsmods" || return 1
+	copy_dir_into "${HALCYON_BASE}/libraries" "${install_dir}${HALCYON_BASE}/libraries" || return 1
+	copy_dir_into "${HALCYON_BASE}/packages" "${install_dir}${HALCYON_BASE}/packages" || return 1
+
+	rm -rf "${HOME}/.haste" "${HOME}/.cabal/config" || return 1
+	if [[ -n "${saved_config}" ]]; then
+		mv "${saved_config}" "${HOME}/.cabal/config" || return 1
+	fi
+}
+
+
+pre_install_hook "$@"

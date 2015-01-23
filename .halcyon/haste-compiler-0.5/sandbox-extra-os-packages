@@ -1,0 +1,10 @@
+linux-(centos|fedora):bzip2-devel
+linux-(centos|fedora):bzip2-libs
+linux-(centos|fedora):gmp
+linux-(centos|fedora):gmp-devel
+linux-(debian-6|ubuntu-10):libgmp3c2
+linux-(debian-6|ubuntu-10):libgmp3-dev
+linux-(debian-7|ubuntu-(12|14)):libgmp10
+linux-(debian-7|ubuntu-(12|14)):libgmp-dev
+linux-(debian|ubuntu):libbz2-1.0
+linux-(debian|ubuntu):libbz2-dev
