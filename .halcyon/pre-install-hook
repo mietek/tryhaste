@@ -4,8 +4,6 @@ source "${HALCYON_DIR}/src.sh"
 
 
 install_haste_packages () {
-	expect_vars HOME
-
 	local source_dir install_dir
 	expect_args source_dir install_dir -- "$@"
 
@@ -47,13 +45,9 @@ pre_install_hook () {
 	# NOTE: Haste needs a custom Cabal config, as it does not support Cabal sandboxes.
 
 	local saved_config
-	saved_config=''
-	if [[ -f "${HOME}/.cabal/config" ]]; then
-		saved_config=$( get_tmp_file 'halcyon-saved-config' ) || return 1
-		mv "${HOME}/.cabal/config" "${saved_config}" || return 1
-	fi
-	mkdir -p "${HOME}/.cabal" || return 1
-	grep -v 'require-sandbox:' "${HALCYON_BASE}/cabal/config" >"${HOME}/.cabal/config" || return 1
+	saved_config=$( get_tmp_file 'halcyon-saved-config' ) || return 1
+	mv "${HALCYON_BASE}/cabal/config" "${saved_config}" || return 1
+	grep -v 'require-sandbox:' "${saved_config}" >"${HALCYON_BASE}/cabal/config" || return 1
 
 	local magic_dir
 	magic_dir="${source_dir}/.halcyon/haste-compiler-0.5"
@@ -91,10 +85,8 @@ pre_install_hook () {
 	copy_dir_into "${HALCYON_BASE}/libraries" "${install_dir}${HALCYON_BASE}/libraries" || return 1
 	copy_dir_into "${HALCYON_BASE}/packages" "${install_dir}${HALCYON_BASE}/packages" || return 1
 
-	rm -rf "${HOME}/.haste" "${HOME}/.cabal/config" || return 1
-	if [[ -n "${saved_config}" ]]; then
-		mv "${saved_config}" "${HOME}/.cabal/config" || return 1
-	fi
+	rm -rf "${HOME}/.haste" || return 1
+	mv "${saved_config}" "${HALCYON_BASE}/cabal/config" || return 1
 }
 
 
